@@ -169,6 +169,25 @@ export const getAvailableAggregationsFromObjectFields = (
             aggregateOperation: AGGREGATE_OPERATIONS.avg,
           };
           break;
+        case FieldMetadataType.BOOLEAN:
+          acc[`countTrue${capitalize(field.name)}`] = {
+            type: GraphQLInt,
+            description: `Number of true values for ${field.name}`,
+            fromField: field.name,
+            fromFieldType: field.type,
+            fromSubFields,
+            aggregateOperation: AGGREGATE_OPERATIONS.countTrue,
+          };
+          
+          acc[`countFalse${capitalize(field.name)}`] = {
+            type: GraphQLInt,
+            description: `Number of false values for ${field.name}`,
+            fromField: field.name,
+            fromFieldType: field.type,
+            fromSubFields,
+            aggregateOperation: AGGREGATE_OPERATIONS.countFalse,
+          };
+          break;
       }
 
       return acc;

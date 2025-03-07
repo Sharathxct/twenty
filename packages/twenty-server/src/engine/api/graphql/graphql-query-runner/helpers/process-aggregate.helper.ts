@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { SelectQueryBuilder } from 'typeorm';
 import { isDefined } from 'twenty-shared';
+import { SelectQueryBuilder } from 'typeorm';
 
 import { AGGREGATE_OPERATIONS } from 'src/engine/api/graphql/graphql-query-runner/constants/aggregate-operations.constant';
 import { AggregationField } from 'src/engine/api/graphql/workspace-schema-builder/utils/get-available-aggregations-from-object-fields.util';
@@ -21,6 +21,11 @@ export class ProcessAggregateHelper {
     for (const [aggregatedFieldName, aggregatedField] of Object.entries(
       selectedAggregatedFields,
     )) {
+      console.log('Processing aggregation:', {
+        fieldName: aggregatedFieldName,
+        operation: aggregatedField?.aggregateOperation,
+        fromField: aggregatedField?.fromField
+      });
       if (
         !isDefined(aggregatedField?.fromField) ||
         !isDefined(aggregatedField?.aggregateOperation)
@@ -37,9 +42,9 @@ export class ProcessAggregateHelper {
         aggregatedField.subFieldForNumericOperation,
       )
         ? formatColumnNamesFromCompositeFieldAndSubfields(
-            aggregatedField.fromField,
-            [aggregatedField.subFieldForNumericOperation],
-          )[0]
+          aggregatedField.fromField,
+          [aggregatedField.subFieldForNumericOperation],
+        )[0]
         : columnNames[0];
 
       if (
@@ -57,6 +62,18 @@ export class ProcessAggregateHelper {
       const columnExpression = `NULLIF(CONCAT(${concatenatedColumns}), '')`;
 
       switch (aggregatedField.aggregateOperation) {
+        case AGGREGATE_OPERATIONS.countTrue:
+          queryBuilder.addSelect(
+            `CASE WHEN COUNT(*) = 0 THEN NULL ELSE COUNT(CASE WHEN ${columnExpression} = true THEN 1 END) END`,
+            `${aggregatedFieldName}`,
+          );
+          break;
+        case AGGREGATE_OPERATIONS.countFalse:
+          queryBuilder.addSelect(
+            `CASE WHEN COUNT(*) = 0 THEN NULL ELSE COUNT(CASE WHEN ${columnExpression} = false THEN 1 END) END`,
+            `${aggregatedFieldName}`,
+          );
+          break;
         case AGGREGATE_OPERATIONS.countEmpty:
           queryBuilder.addSelect(
             `CASE WHEN COUNT(*) = 0 THEN NULL ELSE COUNT(*) - COUNT(${columnExpression}) END`,
